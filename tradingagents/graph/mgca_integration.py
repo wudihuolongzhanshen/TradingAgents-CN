@@ -179,8 +179,18 @@ class MGCAStateAdapter:
         """
         Inject MGCA messages into the agent state for agents to access
         """
+        # Validate state is a dictionary
+        if not isinstance(state, dict):
+            logger.warning(f"⚠️ State is not a dictionary, cannot inject messages")
+            return state
+        
         # Create a new field in state for MGCA messages if it doesn't exist
         if "mgca_messages" not in state:
+            state["mgca_messages"] = []
+        
+        # Validate existing field is a list
+        if not isinstance(state["mgca_messages"], list):
+            logger.warning(f"⚠️ mgca_messages field is not a list, resetting")
             state["mgca_messages"] = []
         
         # Add new messages
@@ -331,8 +341,12 @@ class MGCAGraphEnhancer:
             correlation_id=correlation_id
         )
         
-        self.coordinator.send_message(message)
-        logger.info(f"❓ Cross-agent query sent from {sender} to {', '.join(recipients)}")
+        try:
+            self.coordinator.send_message(message)
+            logger.info(f"❓ Cross-agent query sent from {sender} to {', '.join(recipients)}")
+        except Exception as e:
+            logger.error(f"❌ Failed to send cross-agent query: {e}")
+            raise
         
         return correlation_id
     

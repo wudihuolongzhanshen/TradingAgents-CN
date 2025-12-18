@@ -154,8 +154,16 @@ class MGCARouter:
         }
         """
         self.routing_rules.append(rule)
-        logger.debug(f"📋 Added routing rule: {rule.get('from_group', 'any').value if hasattr(rule.get('from_group', 'any'), 'value') else 'any'} -> "
-                    f"{rule.get('to_group', 'any').value if hasattr(rule.get('to_group', 'any'), 'value') else 'any'}")
+        
+        # Helper function for formatting group values
+        def format_group(group):
+            if hasattr(group, 'value'):
+                return group.value
+            return 'any'
+        
+        from_group_str = format_group(rule.get('from_group', 'any'))
+        to_group_str = format_group(rule.get('to_group', 'any'))
+        logger.debug(f"📋 Added routing rule: {from_group_str} -> {to_group_str}")
     
     def route_message(self, message: MGCAMessage):
         """
@@ -302,10 +310,18 @@ class MGCAConsensusEngine:
             logger.warning(f"⚠️ Consensus session {session_id} not found")
             return
         
-        session = self.consensus_sessions[session_id]
-        if agent_id not in session["participants"]:
+        session = self.consensus_sessions.get(session_id)
+        if not session:
+            logger.warning(f"⚠️ Consensus session {session_id} not found")
+            return
+        
+        if agent_id not in session.get("participants", []):
             logger.warning(f"⚠️ Agent {agent_id} not a participant in session {session_id}")
             return
+        
+        # Ensure votes dictionary exists
+        if "votes" not in session:
+            session["votes"] = {}
         
         session["votes"][agent_id] = {"vote": vote, "weight": weight}
         logger.debug(f"🗳️ Vote cast by {agent_id} in session {session_id}")
@@ -315,10 +331,15 @@ class MGCAConsensusEngine:
     
     def _check_consensus(self, session_id: str):
         """Check if consensus has been reached in a session"""
-        session = self.consensus_sessions[session_id]
-        votes = session["votes"]
+        session = self.consensus_sessions.get(session_id)
+        if not session:
+            logger.warning(f"⚠️ Consensus session {session_id} not found")
+            return
         
-        if len(votes) < len(session["participants"]):
+        votes = session.get("votes", {})
+        participants = session.get("participants", [])
+        
+        if len(votes) < len(participants):
             return  # Not all votes in yet
         
         # Calculate weighted consensus
@@ -326,10 +347,13 @@ class MGCAConsensusEngine:
         total_weight = 0.0
         
         for voter_data in votes.values():
-            vote = voter_data["vote"]
-            weight = voter_data["weight"]
-            vote_groups[vote] = vote_groups.get(vote, 0.0) + weight
-            total_weight += weight
+            # Safely extract vote and weight with defaults
+            vote = voter_data.get("vote")
+            weight = voter_data.get("weight", 1.0)
+            
+            if vote is not None:
+                vote_groups[vote] = vote_groups.get(vote, 0.0) + weight
+                total_weight += weight
         
         # Find majority vote
         if total_weight > 0:
