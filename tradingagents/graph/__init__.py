@@ -6,6 +6,16 @@ from .setup import GraphSetup
 from .propagation import Propagator
 from .reflection import Reflector
 from .signal_processing import SignalProcessor
+from .mgca import (
+    MGCACoordinator,
+    MGCARouter,
+    MGCAMessage,
+    MGCAConsensusEngine,
+    MessageType,
+    MessagePriority,
+    AgentGroup,
+)
+from .mgca_integration import MGCAStateAdapter, MGCAGraphEnhancer
 
 # 导入统一日志系统
 from tradingagents.utils.logging_init import get_logger
@@ -18,4 +28,14 @@ __all__ = [
     "Propagator",
     "Reflector",
     "SignalProcessor",
+    # MGCA components
+    "MGCACoordinator",
+    "MGCARouter",
+    "MGCAMessage",
+    "MGCAConsensusEngine",
+    "MessageType",
+    "MessagePriority",
+    "AgentGroup",
+    "MGCAStateAdapter",
+    "MGCAGraphEnhancer",
 ]
